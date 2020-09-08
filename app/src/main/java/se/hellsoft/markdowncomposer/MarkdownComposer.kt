@@ -244,7 +244,6 @@ fun AnnotatedString.Builder.appendMarkdownChildren(
     parent: Node, colors: Colors) {
     var child = parent.firstChild
     while (child != null) {
-        val codeStyle = TextStyle(fontFamily = FontFamily.Monospace).toSpanStyle()
         when (child) {
             is Paragraph -> appendMarkdownChildren(child, colors)
             is Text -> append(child.literal)
@@ -260,14 +259,12 @@ fun AnnotatedString.Builder.appendMarkdownChildren(
                 pop()
             }
             is Code -> {
-                pushStyle(codeStyle)
+                pushStyle(TextStyle(fontFamily = FontFamily.Monospace).toSpanStyle())
                 append(child.literal)
                 pop()
             }
             is HardLineBreak -> {
-                pushStyle(codeStyle)
                 append("\n")
-                pop()
             }
             is Link -> {
                 val underline = SpanStyle(colors.primary, textDecoration = TextDecoration.Underline)
