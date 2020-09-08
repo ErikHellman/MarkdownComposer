@@ -72,8 +72,8 @@ private const val TAG_URL = "url"
 private const val TAG_IMAGE_URL = "imageUrl"
 
 @Composable
-fun MDDocument(document: Document, modifier: Modifier = Modifier) {
-    MDBlockChildren(document, modifier)
+fun MDDocument(document: Document) {
+    MDBlockChildren(document)
 }
 
 @Composable
@@ -95,7 +95,7 @@ fun MDHeading(heading: Heading, modifier: Modifier = Modifier) {
     val padding = if (heading.parent is Document) 8.dp else 0.dp
     Box(paddingBottom = padding, modifier = modifier) {
         val text = annotatedString {
-            inlineChildren(heading, this, MaterialTheme.colors)
+            appendMarkdownChildren(heading, MaterialTheme.colors)
         }
         MarkdownText(text, style)
     }
@@ -111,7 +111,7 @@ fun MDParagraph(paragraph: Paragraph, modifier: Modifier = Modifier) {
         Box(paddingBottom = padding, modifier = modifier) {
             val styledText = annotatedString {
                 pushStyle(MaterialTheme.typography.body1.toSpanStyle())
-                inlineChildren(paragraph, this, MaterialTheme.colors)
+                appendMarkdownChildren(paragraph, MaterialTheme.colors)
                 pop()
             }
             MarkdownText(styledText, MaterialTheme.typography.body1)
@@ -133,7 +133,7 @@ fun MDBulletList(bulletList: BulletList, modifier: Modifier = Modifier) {
         val text = annotatedString {
             pushStyle(MaterialTheme.typography.body1.toSpanStyle())
             append("$marker ")
-            inlineChildren(it, this, MaterialTheme.colors)
+            appendMarkdownChildren(it, MaterialTheme.colors)
             pop()
         }
         MarkdownText(text, MaterialTheme.typography.body1, modifier)
@@ -148,7 +148,7 @@ fun MDOrderedList(orderedList: OrderedList, modifier: Modifier = Modifier) {
         val text = annotatedString {
             pushStyle(MaterialTheme.typography.body1.toSpanStyle())
             append("${number++}$delimiter ")
-            inlineChildren(it, this, MaterialTheme.colors)
+            appendMarkdownChildren(it, MaterialTheme.colors)
             pop()
         }
         MarkdownText(text, MaterialTheme.typography.body1, modifier)
@@ -192,7 +192,7 @@ fun MDBlockQuote(blockQuote: BlockQuote, modifier: Modifier = Modifier) {
                 MaterialTheme.typography.body1.toSpanStyle()
                     .plus(SpanStyle(fontStyle = FontStyle.Italic))
             )
-            inlineChildren(blockQuote, this, MaterialTheme.colors)
+            appendMarkdownChildren(blockQuote, MaterialTheme.colors)
             pop()
         }
         Text(text, modifier)
@@ -222,59 +222,60 @@ fun MDThematicBreak(thematicBreak: ThematicBreak, modifier: Modifier = Modifier)
 }
 
 @Composable
-fun MDBlockChildren(parent: Node, modifier: Modifier = Modifier) {
+fun MDBlockChildren(parent: Node) {
     var child = parent.firstChild
     while (child != null) {
         when (child) {
-            is BlockQuote -> MDBlockQuote(child, modifier)
-            is ThematicBreak -> MDThematicBreak(child, modifier)
-            is Heading -> MDHeading(child, modifier)
-            is Paragraph -> MDParagraph(child, modifier)
-            is FencedCodeBlock -> MDFencedCodeBlock(child, modifier)
-            is IndentedCodeBlock -> MDIndentedCodeBlock(child, modifier)
-            is Image -> MDImage(child, modifier)
-            is BulletList -> MDBulletList(child, modifier)
-            is OrderedList -> MDOrderedList(child, modifier)
+            is BlockQuote -> MDBlockQuote(child)
+            is ThematicBreak -> MDThematicBreak(child)
+            is Heading -> MDHeading(child)
+            is Paragraph -> MDParagraph(child)
+            is FencedCodeBlock -> MDFencedCodeBlock(child)
+            is IndentedCodeBlock -> MDIndentedCodeBlock(child)
+            is Image -> MDImage(child)
+            is BulletList -> MDBulletList(child)
+            is OrderedList -> MDOrderedList(child)
         }
         child = child.next
     }
 }
 
-fun inlineChildren(parent: Node, builder: AnnotatedString.Builder, colors: Colors) {
+fun AnnotatedString.Builder.appendMarkdownChildren(
+    parent: Node, colors: Colors) {
     var child = parent.firstChild
     while (child != null) {
         val codeStyle = TextStyle(fontFamily = FontFamily.Monospace).toSpanStyle()
         when (child) {
-            is Paragraph -> inlineChildren(child, builder, colors)
-            is Text -> builder.append(child.literal)
-            is Image -> builder.appendInlineContent(TAG_IMAGE_URL, child.destination)
+            is Paragraph -> appendMarkdownChildren(child, colors)
+            is Text -> append(child.literal)
+            is Image -> appendInlineContent(TAG_IMAGE_URL, child.destination)
             is Emphasis -> {
-                builder.pushStyle(SpanStyle(fontStyle = FontStyle.Italic))
-                inlineChildren(child, builder, colors)
-                builder.pop()
+                pushStyle(SpanStyle(fontStyle = FontStyle.Italic))
+                appendMarkdownChildren(child, colors)
+                pop()
             }
             is StrongEmphasis -> {
-                builder.pushStyle(SpanStyle(fontWeight = FontWeight.Bold))
-                inlineChildren(child, builder, colors)
-                builder.pop()
+                pushStyle(SpanStyle(fontWeight = FontWeight.Bold))
+                appendMarkdownChildren(child, colors)
+                pop()
             }
             is Code -> {
-                builder.pushStyle(codeStyle)
-                builder.append(child.literal)
-                builder.pop()
+                pushStyle(codeStyle)
+                append(child.literal)
+                pop()
             }
             is HardLineBreak -> {
-                builder.pushStyle(codeStyle)
-                builder.append("\n")
-                builder.pop()
+                pushStyle(codeStyle)
+                append("\n")
+                pop()
             }
             is Link -> {
                 val underline = SpanStyle(colors.primary, textDecoration = TextDecoration.Underline)
-                builder.pushStyle(underline)
-                builder.pushStringAnnotation(TAG_URL, child.destination)
-                inlineChildren(child, builder, colors)
-                builder.pop()
-                builder.pop()
+                pushStyle(underline)
+                pushStringAnnotation(TAG_URL, child.destination)
+                appendMarkdownChildren(child, colors)
+                pop()
+                pop()
             }
         }
         child = child.next
