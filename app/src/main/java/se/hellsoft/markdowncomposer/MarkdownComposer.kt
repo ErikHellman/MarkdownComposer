@@ -156,7 +156,11 @@ fun MDOrderedList(orderedList: OrderedList, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun MDListItems(listBlock: ListBlock, modifier: Modifier = Modifier, item: @Composable (node: Node) -> Unit) {
+fun MDListItems(
+    listBlock: ListBlock,
+    modifier: Modifier = Modifier,
+    item: @Composable (node: Node) -> Unit
+) {
     val bottom = if (listBlock.parent is Document) 8.dp else 0.dp
     val start = if (listBlock.parent is Document) 0.dp else 8.dp
     Box(paddingBottom = bottom, paddingStart = start, modifier = modifier) {
@@ -241,7 +245,8 @@ fun MDBlockChildren(parent: Node) {
 }
 
 fun AnnotatedString.Builder.appendMarkdownChildren(
-    parent: Node, colors: Colors) {
+    parent: Node, colors: Colors
+) {
     var child = parent.firstChild
     while (child != null) {
         when (child) {

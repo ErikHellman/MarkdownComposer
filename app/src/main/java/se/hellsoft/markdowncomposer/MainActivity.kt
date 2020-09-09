@@ -50,7 +50,6 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
-
 @Preview(showBackground = true)
 @Composable
 fun DefaultPreview() {
@@ -59,7 +58,9 @@ fun DefaultPreview() {
     MarkdownComposerTheme {
         Surface(
             color = MaterialTheme.colors.background) {
-            MDDocument(root)
+            Box {
+                MDDocument(root)
+            }
         }
     }
 }
