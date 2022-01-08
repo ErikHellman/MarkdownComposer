@@ -1,35 +1,47 @@
 package se.hellsoft.markdowncomposer
 
-import androidx.compose.foundation.Box
-import androidx.compose.foundation.ContentGravity
-import androidx.compose.foundation.Text
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material.Colors
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.drawBehind
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.gesture.tapGestureFilter
-import androidx.compose.ui.platform.UriHandlerAmbient
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.annotatedString
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import dev.chrisbanes.accompanist.coil.CoilImage
+import coil.compose.LocalImageLoader
+import coil.compose.rememberImagePainter
+import coil.size.OriginalSize
 import org.commonmark.node.BlockQuote
 import org.commonmark.node.BulletList
 import org.commonmark.node.Code
@@ -93,8 +105,8 @@ fun MDHeading(heading: Heading, modifier: Modifier = Modifier) {
     }
 
     val padding = if (heading.parent is Document) 8.dp else 0.dp
-    Box(paddingBottom = padding, modifier = modifier) {
-        val text = annotatedString {
+    Box(modifier = modifier.padding(bottom = padding)) {
+        val text = buildAnnotatedString {
             appendMarkdownChildren(heading, MaterialTheme.colors)
         }
         MarkdownText(text, style)
@@ -108,8 +120,8 @@ fun MDParagraph(paragraph: Paragraph, modifier: Modifier = Modifier) {
         MDImage(paragraph.firstChild as Image, modifier)
     } else {
         val padding = if (paragraph.parent is Document) 8.dp else 0.dp
-        Box(paddingBottom = padding, modifier = modifier) {
-            val styledText = annotatedString {
+        Box(modifier = modifier.padding(bottom = padding)) {
+            val styledText = buildAnnotatedString {
                 pushStyle(MaterialTheme.typography.body1.toSpanStyle())
                 appendMarkdownChildren(paragraph, MaterialTheme.colors)
                 pop()
@@ -121,8 +133,16 @@ fun MDParagraph(paragraph: Paragraph, modifier: Modifier = Modifier) {
 
 @Composable
 fun MDImage(image: Image, modifier: Modifier = Modifier) {
-    Box(modifier = modifier.fillMaxWidth(), gravity = ContentGravity.Center) {
-        CoilImage(image.destination, modifier)
+    Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        Image(
+            painter = rememberImagePainter(
+                data = image.destination,
+                builder = {
+                    size(OriginalSize)
+                },
+            ),
+            contentDescription = null,
+        )
     }
 }
 
@@ -130,7 +150,7 @@ fun MDImage(image: Image, modifier: Modifier = Modifier) {
 fun MDBulletList(bulletList: BulletList, modifier: Modifier = Modifier) {
     val marker = bulletList.bulletMarker
     MDListItems(bulletList, modifier = modifier) {
-        val text = annotatedString {
+        val text = buildAnnotatedString {
             pushStyle(MaterialTheme.typography.body1.toSpanStyle())
             append("$marker ")
             appendMarkdownChildren(it, MaterialTheme.colors)
@@ -145,7 +165,7 @@ fun MDOrderedList(orderedList: OrderedList, modifier: Modifier = Modifier) {
     var number = orderedList.startNumber
     val delimiter = orderedList.delimiter
     MDListItems(orderedList, modifier) {
-        val text = annotatedString {
+        val text = buildAnnotatedString {
             pushStyle(MaterialTheme.typography.body1.toSpanStyle())
             append("${number++}$delimiter ")
             appendMarkdownChildren(it, MaterialTheme.colors)
@@ -163,7 +183,7 @@ fun MDListItems(
 ) {
     val bottom = if (listBlock.parent is Document) 8.dp else 0.dp
     val start = if (listBlock.parent is Document) 0.dp else 8.dp
-    Box(paddingBottom = bottom, paddingStart = start, modifier = modifier) {
+    Column(modifier = modifier.padding(start = start, bottom = bottom)) {
         var listItem = listBlock.firstChild
         while (listItem != null) {
             var child = listItem.firstChild
@@ -183,15 +203,17 @@ fun MDListItems(
 @Composable
 fun MDBlockQuote(blockQuote: BlockQuote, modifier: Modifier = Modifier) {
     val color = MaterialTheme.colors.onBackground
-    Box(modifier = modifier.drawBehind {
-        drawLine(
-            color = color,
-            strokeWidth = 2f,
-            start = Offset(12.dp.value, 0f),
-            end = Offset(12.dp.value, size.height)
-        )
-    }, paddingStart = 16.dp, paddingTop = 4.dp, paddingBottom = 4.dp) {
-        val text = annotatedString {
+    Box(modifier = modifier
+        .drawBehind {
+            drawLine(
+                color = color,
+                strokeWidth = 2f,
+                start = Offset(12.dp.value, 0f),
+                end = Offset(12.dp.value, size.height)
+            )
+        }
+        .padding(start = 16.dp, top = 4.dp, bottom = 4.dp)) {
+        val text = buildAnnotatedString {
             pushStyle(
                 MaterialTheme.typography.body1.toSpanStyle()
                     .plus(SpanStyle(fontStyle = FontStyle.Italic))
@@ -206,7 +228,7 @@ fun MDBlockQuote(blockQuote: BlockQuote, modifier: Modifier = Modifier) {
 @Composable
 fun MDFencedCodeBlock(fencedCodeBlock: FencedCodeBlock, modifier: Modifier = Modifier) {
     val padding = if (fencedCodeBlock.parent is Document) 8.dp else 0.dp
-    Box(paddingBottom = padding, paddingStart = 8.dp, modifier = modifier) {
+    Box(modifier = modifier.padding(start = 8.dp, bottom = padding)) {
         Text(
             text = fencedCodeBlock.literal,
             style = TextStyle(fontFamily = FontFamily.Monospace),
@@ -286,20 +308,22 @@ fun AnnotatedString.Builder.appendMarkdownChildren(
 
 @Composable
 fun MarkdownText(text: AnnotatedString, style: TextStyle, modifier: Modifier = Modifier) {
-    val uriHandler = UriHandlerAmbient.current
+    val uriHandler = LocalUriHandler.current
     val layoutResult = remember { mutableStateOf<TextLayoutResult?>(null) }
 
     Text(text = text,
-        modifier = modifier.tapGestureFilter { pos ->
-            layoutResult.value?.let { layoutResult ->
-                val position = layoutResult.getOffsetForPosition(pos)
-                text.getStringAnnotations(position, position)
-                    .firstOrNull()
-                    ?.let { sa ->
-                        if (sa.tag == TAG_URL) {
-                            uriHandler.openUri(sa.item)
+        modifier.pointerInput(Unit) {
+            detectTapGestures { offset ->
+                layoutResult.value?.let { layoutResult ->
+                    val position = layoutResult.getOffsetForPosition(offset)
+                    text.getStringAnnotations(position, position)
+                        .firstOrNull()
+                        ?.let { sa ->
+                            if (sa.tag == TAG_URL) {
+                                uriHandler.openUri(sa.item)
+                            }
                         }
-                    }
+                }
             }
         },
         style = style,
@@ -307,7 +331,15 @@ fun MarkdownText(text: AnnotatedString, style: TextStyle, modifier: Modifier = M
             TAG_IMAGE_URL to InlineTextContent(
                 Placeholder(style.fontSize, style.fontSize, PlaceholderVerticalAlign.Bottom)
             ) {
-                CoilImage(it, alignment = Alignment.Center)
+                Image(
+                    painter = rememberImagePainter(
+                        data = it,
+                    ),
+                    contentDescription = null,
+                    modifier = modifier,
+                    alignment = Alignment.Center
+                )
+
             }
         ),
         onTextLayout = { layoutResult.value = it }
